@@ -1,0 +1,92 @@
+name: Pull Request CI
+
+on:
+  pull_request:
+    paths:
+      - '**.kt'
+      - '**.xml'
+      - '**.kts'
+      - '**.properties'
+      - 'gradle/libs.versions.toml'
+      - '.github/workflows/pr-ci.yaml'
+
+permissions:
+  id-token: write
+  contents: read
+  checks: write
+
+jobs:
+  pr-ci:
+    runs-on: ubuntu-latest
+
+    env:
+      HOST: http://localhost
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+
+      - name: set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Set config files
+        run: |
+          echo ${{ secrets.DEBUG_GOOGLE_SERVICES_JSON }} | base64 -d > mobile/src/debug/google-services.json
+          echo ${{ secrets.DEBUG_GOOGLE_SERVICES_JSON }} | base64 -d > wear/src/debug/google-services.json
+
+      - name: Start Http Docker
+        run: docker run -p 80:80 -d --name httpbin kennethreitz/httpbin
+
+      - name: Run build
+        run: ./gradlew compileDebugUnitTestJavaWithJavac
+  
+      - name: Wait for the service to start
+        run: |
+          while ! curl --output /dev/null --silent --head --fail http://localhost; do
+            sleep 1
+          done
+
+      - name: Run test
+        run: ./gradlew testDebugUnitTest
+  
+      - name: Stop Docker container
+        run: docker stop httpbin
+
+      - name: shared test report
+        uses: dorny/test-reporter@v1
+        if: github.actor != 'dependabot[bot]'
+        with:
+          name: shared test
+          path: shared/build/test-results/testDebugUnitTest/TEST-*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: mobile test report
+        uses: dorny/test-reporter@v1
+        if: github.actor != 'dependabot[bot]'
+        with:
+          name: mobile test
+          path: mobile/build/test-results/testDebugUnitTest/TEST-*.xml
+          reporter: java-junit
+          fail-on-error: false
+
+      - name: wear test report
+        uses: dorny/test-reporter@v1
+        if: github.actor != 'dependabot[bot]'
+        with:
+          name: wear test
+          path: wear/build/test-results/testDebugUnitTest/TEST-*.xml
+          reporter: java-junit
+          fail-on-error: false
