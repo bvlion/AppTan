@@ -11,7 +11,7 @@ composeBom = "2025.04.00"
 googleServices = "4.4.2"
 firebaseCrashlytics = "3.0.3"
 datastore = "1.1.4"
-workKtx = "2.10.0"
+workKtx = "2.10.2"
 firebaseBom = "33.12.0"
 splashscreen = "1.0.1"
 
