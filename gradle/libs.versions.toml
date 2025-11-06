@@ -13,7 +13,7 @@ firebaseCrashlytics = "3.0.3"
 datastore = "1.1.4"
 workKtx = "2.10.0"
 firebaseBom = "33.12.0"
-splashscreen = "1.0.1"
+splashscreen = "1.2.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
